@@ -1,0 +1,304 @@
+html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FundingTracer - Follow the Money</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #0a0a0a;
+            color: #e0e0e0;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+        }
+        h1 {
+            color: #ff6b6b;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        .tagline {
+            color: #888;
+            font-size: 1.2em;
+        }
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 15px;
+            font-size: 16px;
+            background: #1a1a1a;
+            border: 2px solid #333;
+            color: #fff;
+            border-radius: 5px;
+        }
+        button {
+            padding: 15px 30px;
+            background: #ff6b6b;
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #ff5252;
+        }
+        .results {
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #333;
+        }
+        .connection {
+            background: #0d0d0d;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #ff6b6b;
+        }
+        .entity {
+            font-weight: bold;
+            color: #4ecdc4;
+        }
+        .amount {
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+        .shell-company {
+            color: #ffcc00;
+            font-style: italic;
+        }
+        .hidden {
+            display: none;
+        }
+        .add-data {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 30px;
+        }
+        .info-box {
+            background: #1a1a1a;
+            border-left: 4px solid #4ecdc4;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .graph-container {
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            min-height: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>FundingTracer</h1>
+        <p class="tagline">Expose Hidden Funding Networks • Follow the Money • Reveal the Truth</p>
+    </div>
+
+    <div class="info-box">
+        <p><strong>How it works:</strong> Search for any organization, study, or researcher to see their funding connections. This tool reveals the shell companies, dark money groups, and corporate interests behind "independent" research.</p>
+    </div>
+
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Enter organization, study title, or researcher name...">
+        <button onclick="searchFunding()">Trace Funding</button>
+    </div>
+
+    <div id="results" class="hidden"></div>
+
+    <div class="add-data">
+        <h3>Add New Funding Connection</h3>
+        <p>Know about hidden funding? Add it to our database:</p>
+        <input type="text" id="entityName" placeholder="Entity name">
+        <input type="text" id="fundingSource" placeholder="Funding source">
+        <input type="text" id="amount" placeholder="Amount (optional)">
+        <input type="text" id="shellCompanies" placeholder="Shell companies involved (comma separated)">
+        <button onclick="addConnection()">Add Connection</button>
+    </div>
+
+    <script>
+        // Initial database - expand this with real data
+        const fundingDB = {
+            "Competitive Enterprise Institute": {
+                connections: [
+                    {
+                        source: "ExxonMobil",
+                        amount: "$2,005,000",
+                        years: "1997-2005",
+                        shells: ["Donors Trust", "Donors Capital Fund"],
+                        purpose: "Climate denial research"
+                    },
+                    {
+                        source: "Koch Industries",
+                        amount: "$1,093,000",
+                        years: "1997-2017",
+                        shells: ["Charles Koch Foundation", "Claude R. Lambe Foundation"],
+                        purpose: "Anti-regulation advocacy"
+                    }
+                ]
+            },
+            "Heartland Institute": {
+                connections: [
+                    {
+                        source: "Philip Morris",
+                        amount: "$600,000+",
+                        years: "1990s",
+                        shells: ["Anonymous donors"],
+                        purpose: "Tobacco harm denial"
+                    },
+                    {
+                        source: "Fossil fuel companies",
+                        amount: "Undisclosed",
+                        years: "2008-present",
+                        shells: ["Donors Trust", "Bradley Foundation"],
+                        purpose: "Climate change denial"
+                    }
+                ]
+            },
+            "American Enterprise Institute": {
+                connections: [
+                    {
+                        source: "ExxonMobil",
+                        amount: "$3,615,000",
+                        years: "1998-2012",
+                        shells: ["Various foundations"],
+                        purpose: "Energy policy research"
+                    }
+                ]
+            },
+            "Tesla": {
+                connections: [
+                    {
+                        source: "US Government Subsidies",
+                        amount: "$4.9 billion",
+                        years: "2015 estimate",
+                        shells: ["Tax credits", "Grants", "Loans"],
+                        purpose: "EV development, Solar City bailout"
+                    },
+                    {
+                        source: "Carbon Credit Sales",
+                        amount: "$1.6 billion",
+                        years: "2020-2021",
+                        shells: ["Regulatory market manipulation"],
+                        purpose: "Profit generation from competitors"
+                    }
+                ]
+            }
+        };
+
+        // Load saved data from localStorage
+        function loadSavedData() {
+            const saved = localStorage.getItem('fundingTracerDB');
+            if (saved) {
+                Object.assign(fundingDB, JSON.parse(saved));
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('fundingTracerDB', JSON.stringify(fundingDB));
+        }
+
+        function searchFunding() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+            resultsDiv.classList.remove('hidden');
+
+            let found = false;
+
+            for (const [entity, data] of Object.entries(fundingDB)) {
+                if (entity.toLowerCase().includes(query)) {
+                    found = true;
+                    const resultDiv = document.createElement('div');
+                    resultDiv.className = 'results';
+                    
+                    let html = `<h3 class="entity">${entity}</h3>`;
+                    
+                    for (const connection of data.connections) {
+                        html += `
+                            <div class="connection">
+                                <p><strong>Funded by:</strong> ${connection.source}</p>
+                                <p><strong>Amount:</strong> <span class="amount">${connection.amount}</span></p>
+                                <p><strong>Period:</strong> ${connection.years}</p>
+                                <p><strong>Through:</strong> <span class="shell-company">${connection.shells.join(' → ')}</span></p>
+                                <p><strong>Purpose:</strong> ${connection.purpose}</p>
+                            </div>
+                        `;
+                    }
+                    
+                    resultDiv.innerHTML = html;
+                    resultsDiv.appendChild(resultDiv);
+                }
+            }
+
+            if (!found) {
+                resultsDiv.innerHTML = `
+                    <div class="results">
+                        <p>No funding connections found for "${query}"</p>
+                        <p>Know something? Add it below!</p>
+                    </div>
+                `;
+            }
+        }
+
+        function addConnection() {
+            const entity = document.getElementById('entityName').value;
+            const source = document.getElementById('fundingSource').value;
+            const amount = document.getElementById('amount').value || 'Undisclosed';
+            const shells = document.getElementById('shellCompanies').value.split(',').map(s => s.trim()).filter(s => s);
+
+            if (!entity || !source) {
+                alert('Please enter at least entity name and funding source');
+                return;
+            }
+
+            if (!fundingDB[entity]) {
+                fundingDB[entity] = { connections: [] };
+            }
+
+            fundingDB[entity].connections.push({
+                source: source,
+                amount: amount,
+                years: new Date().getFullYear().toString(),
+                shells: shells.length ? shells : ['Direct funding'],
+                purpose: 'User submitted'
+            });
+
+            saveData();
+            
+            // Clear form
+            document.getElementById('entityName').value = '';
+            document.getElementById('fundingSource').value = '';
+            document.getElementById('amount').value = '';
+            document.getElementById('shellCompanies').value = '';
+            
+            alert('Connection added! Search to see it.');
+        }
+
+        // Load saved data on page load
+        loadSavedData();
+
+        // Enable enter key for search
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') searchFunding();
+        });
+    </script>
+</body>
+</html>
